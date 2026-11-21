@@ -11,9 +11,11 @@ hand-built stroke font drawn with the same rasterizer as the picture.
 
 The place: VELDARIS, a cliff town above a still lagoon where the sky
 falls in ribbons of green light and the Starlight Observatory keeps
-watch. One landmark (the observatory tower), one promise (a quiet
+watch -- a stone viaduct, a waterfall, a lantern boat and a lamplit
+jetty below. One landmark (the observatory tower), one promise (a quiet
 night under falling stars), the name set large across the bottom so
-the eye travels name -> tower -> horizon.
+the eye travels name -> tower -> horizon. Every pixel is drawn by
+this program from scratch; no external image is used.
 """
 
 import math
@@ -199,10 +201,14 @@ def draw_moon():
 
 
 def draw_aurora(rng):
+    # layered ribbons: bright cores, a soft halo and a violet fringe,
+    # plus short vertical curtain streaks for texture
     ribbons = [
-        (120, 46, 520, (64, 220, 178), 0.13, 26),
-        (210, 58, 470, (120, 170, 255), 0.10, 30),
-        (300, 40, 560, (90, 235, 200), 0.11, 22),
+        (90, 52, 540, (70, 235, 185), 0.16, 34),
+        (150, 60, 480, (110, 175, 255), 0.11, 38),
+        (210, 46, 580, (95, 245, 205), 0.13, 26),
+        (260, 58, 460, (150, 110, 235), 0.09, 30),
+        (330, 40, 620, (60, 215, 165), 0.10, 20),
     ]
     for base, amp, wave, col, a, rad in ribbons:
         phase = rng.uniform(0, 6.28)
@@ -210,7 +216,10 @@ def draw_aurora(rng):
         while x < W:
             y = base + amp * math.sin((x / wave) * 6.28318 + phase)
             soft_disc(x, y, rad, col, a)
-            x += 7.0
+            # curtain streak: a short vertical wisp under the ribbon
+            if int(x) % 27 == 0:
+                thick_line(x, y, x + 4, y + rng.uniform(26, 52), 3.0, col, a * 0.55)
+            x += 9.0
 
 
 def draw_meteors():
@@ -224,6 +233,29 @@ def draw_meteors():
                        x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1,
                        2.2, (255, 246, 220), a)
         soft_disc(x0, y0, 4, (255, 250, 230), 0.9)
+
+
+def draw_mountains_and_clouds(rng):
+    # distant mountains on the right, under the sunset
+    fill_poly([(560, HORIZON), (660, 548), (760, 590), (860, 540),
+               (960, 596), (W, 560), (W, HORIZON)], (26, 34, 66))
+    fill_poly([(700, HORIZON), (800, 566), (900, 600), (W, 570),
+               (W, HORIZON)], (18, 24, 50))
+    # snow on the far peaks
+    for (px, py) in ((660, 548), (860, 540)):
+        soft_disc(px, py, 14, (210, 200, 220), 0.35)
+    # orange sunset clouds, low and slow
+    for _ in range(46):
+        x = rng.uniform(620, W - 10)
+        y = rng.uniform(430, 600)
+        r = rng.uniform(18, 55)
+        col = rng.choice([(255, 150, 90), (255, 120, 110), (250, 180, 120)])
+        soft_disc(x, y, r, col, rng.uniform(0.05, 0.12))
+    # a few high violet wisps on the left
+    for _ in range(12):
+        x = rng.uniform(0, 420)
+        y = rng.uniform(180, 300)
+        soft_disc(x, y, rng.uniform(20, 44), (150, 110, 200), rng.uniform(0.04, 0.08))
 
 
 def draw_sea():
@@ -241,9 +273,9 @@ def draw_sea():
         ln = rng.uniform(8, 42)
         a = rng.uniform(0.10, 0.30) * (1.0 - (y - HORIZON) / 220.0)
         thick_line(x, y, x + ln, y, 2.0, (240, 210, 160), max(0.0, a))
-    # warm shimmer under the town lights
-    for _ in range(60):
-        x = rng.uniform(120, 470)
+    # warm shimmer in the open water, where the town lights reach
+    for _ in range(50):
+        x = rng.uniform(480, 760)
         y = HORIZON + rng.uniform(4, 150)
         ln = rng.uniform(6, 30)
         a = rng.uniform(0.08, 0.26) * (1.0 - (y - HORIZON) / 180.0)
@@ -256,11 +288,68 @@ CLIFF = [(0, H), (0, 760), (60, 700), (150, 620), (230, 545),
 
 def draw_cliff():
     fill_poly(CLIFF, (10, 17, 34))
+    # rock facets: slightly different dark tones catch the dusk light
+    fill_poly([(60, 700), (150, 620), (230, 545), (200, 640), (120, 720)],
+              (16, 26, 50), 0.8)
+    fill_poly([(320, 505), (400, 540), (455, 600), (380, 620), (340, 560)],
+              (14, 22, 44), 0.8)
+    fill_poly([(0, 760), (60, 700), (120, 760), (40, 860), (0, 900)],
+              (8, 13, 28), 0.8)
+    # cracks down the face
+    for (x0, y0, x1, y1) in [(180, 640, 220, 720), (340, 560, 380, 660),
+                             (90, 720, 140, 800)]:
+        thick_line(x0, y0, x1, y1, 2.0, (6, 10, 22), 0.9)
+    # tiny lit windows carved into the cliff face
+    for (wx, wy) in [(70, 722), (110, 690), (160, 650), (200, 610),
+                     (250, 575), (300, 535), (340, 545), (380, 570),
+                     (420, 600), (450, 640), (90, 760), (140, 720),
+                     (220, 660), (280, 600), (360, 600), (410, 640)]:
+        soft_disc(wx + 2, wy + 2, 5, GOLD, 0.35)
+        rect(wx, wy, 4, 5, GOLD)
     # faint rim light along the top edge
     rim = [(0, 760), (60, 700), (150, 620), (230, 545),
            (320, 505), (400, 540), (455, 600), (480, 700)]
     for (x0, y0), (x1, y1) in zip(rim, rim[1:]):
         thick_line(x0, y0, x1, y1, 3.0, (38, 56, 92), 0.8)
+
+
+def draw_bridge():
+    # a stone viaduct leaves the cliff toward the far rock
+    deck = [(470, 600), (560, 590), (660, 582), (780, 578)]
+    for (x0, y0), (x1, y1) in zip(deck, deck[1:]):
+        thick_line(x0, y0, x1, y1, 7.0, (40, 54, 92), 1.0)
+        thick_line(x0, y0 - 3, x1, y1 - 3, 2.0, (74, 96, 140), 0.8)
+    # solid arches under the deck, rim-lit so they read against the
+    # dark mountains behind them
+    for (ax, ay, ar) in ((540, 596, 34), (650, 586, 40), (730, 580, 26)):
+        prev = None
+        for s in range(25):
+            t = s / 24.0
+            px = ax + math.cos(math.pi * t) * ar
+            py = ay + math.sin(math.pi * t) * ar * 0.8
+            if prev is not None:
+                thick_line(prev[0], prev[1], px, py, 5.0, (56, 72, 112), 0.95)
+            prev = (px, py)
+    # lamps along the deck
+    for (lx, ly) in ((520, 592), (600, 586), (680, 580), (740, 578)):
+        soft_disc(lx, ly - 6, 8, GOLD, 0.5)
+        disc(lx, ly - 6, 2, GOLD)
+
+
+def draw_waterfall(rng):
+    # a fall from a sea-stack rock into the misty lagoon
+    fill_poly([(862, 640), (918, 638), (912, 712), (868, 712)], (22, 30, 56))
+    for _ in range(14):
+        x = rng.uniform(874, 904)
+        y0 = rng.uniform(664, 680)
+        y1 = rng.uniform(760, 800)
+        thick_line(x, y0, x + rng.uniform(-2, 2), y1,
+                   rng.uniform(1.5, 3.5), (215, 230, 245),
+                   rng.uniform(0.18, 0.38))
+    soft_disc(888, 782, 34, (200, 215, 235), 0.18)
+    soft_disc(888, 796, 48, (200, 215, 235), 0.20)
+    soft_disc(872, 806, 40, (190, 205, 230), 0.14)
+    soft_disc(906, 806, 40, (190, 205, 230), 0.14)
 
 
 def draw_town(rng):
@@ -287,25 +376,60 @@ def draw_town(rng):
                 wy = int(y - h + rng.uniform(3, max(4, h - 8)))
                 soft_disc(wx + 2, wy + 2, 5, GOLD, 0.35)
                 rect(wx, wy, 4, 5, GOLD)
+    # a lower terrace of bigger houses along the cliff base
+    for _ in range(9):
+        x = rng.uniform(50, 420)
+        y = 730 + rng.uniform(-10, 10)
+        w = rng.uniform(24, 40)
+        h = rng.uniform(16, 26)
+        rect(int(x), int(y - h), int(w), int(h), (15, 24, 48))
+        fill_poly([(int(x) - 2, int(y - h)),
+                   (int(x + w / 2), int(y - h - 9)),
+                   (int(x + w + 2), int(y - h))], (10, 17, 34))
+        rect(int(x + w - 9), int(y - h - 8), 5, 9, (12, 20, 40))
+        for _ in range(rng.randint(2, 4)):
+            wx = int(x + rng.uniform(3, max(4, w - 7)))
+            wy = int(y - h + rng.uniform(3, max(4, h - 8)))
+            soft_disc(wx + 2, wy + 2, 5, GOLD, 0.35)
+            rect(wx, wy, 4, 5, GOLD)
+    # a slender bell tower on the cliff shoulder
+    fill_poly([(418, 562), (438, 562), (434, 442), (422, 442)], (14, 23, 46))
+    fill_poly([(416, 442), (440, 442), (428, 402)], (10, 16, 32))
+    rect(422, 458, 5, 10, GOLD)
+    rect(429, 458, 5, 10, GOLD)
+    soft_disc(428, 398, 10, GOLD, 0.6)
+    disc(428, 398, 3, GOLD)
 
 
 def draw_tower():
     # The Starlight Observatory on the cliff peak -- the one landmark.
+    # glow where the beam leaves the dome
+    soft_disc(330, 318, 62, (190, 220, 255), 0.10)
     # light beam rising from the dome
     fill_poly([(318, 318), (342, 318), (398, 40), (262, 40)],
               (190, 220, 255), 0.10)
     fill_poly([(322, 318), (338, 318), (372, 60), (288, 60)],
               (200, 228, 255), 0.08)
-    # shaft, slightly tapered
+    # shaft, slightly tapered, on a stone terrace
     fill_poly([(314, 505), (346, 505), (340, 336), (320, 336)], (12, 20, 40))
+    rect(296, 498, 68, 8, (18, 28, 56))
+    rect(292, 506, 76, 6, (14, 22, 46))
     # balcony ring
     rect(312, 330, 36, 8, (16, 26, 52))
     # dome
     disc(330, 322, 27, (16, 26, 52))
     rect(303, 322, 54, 6, (16, 26, 52))
+    # dome ribs fanning from the crown
+    for ang in (-0.9, -0.45, 0.0, 0.45, 0.9):
+        thick_line(330, 296, 330 + math.sin(ang) * 24, 322, 1.5,
+                   (30, 44, 78), 0.8)
     # lit slit windows on the dome
     rect(324, 306, 4, 18, GOLD)
     rect(334, 304, 4, 20, GOLD)
+    # drum under the dome, ringed with lit windows
+    rect(306, 328, 48, 12, (16, 26, 52))
+    for wx in (310, 320, 330, 340, 350):
+        rect(wx, 331, 4, 7, GOLD)
     # spire + beacon star
     thick_line(330, 296, 330, 268, 3.0, (16, 26, 52))
     soft_disc(330, 262, 16, (255, 233, 168), 0.7)
@@ -315,15 +439,27 @@ def draw_tower():
 
 
 def draw_boat():
-    # a small lantern boat on the lagoon, for scale and for the promise
-    # of a quiet evening afloat
-    fill_poly([(668, 706), (742, 706), (728, 724), (682, 724)], (8, 14, 28))
-    fill_poly([(700, 706), (700, 648), (736, 706)], (232, 222, 196))
-    thick_line(700, 648, 700, 708, 3.0, (40, 34, 26))
-    soft_disc(712, 700, 9, GOLD, 0.6)
-    disc(712, 700, 3, (255, 210, 130))
-    for yy, a in ((730, 0.30), (742, 0.18), (754, 0.10)):
-        thick_line(700, yy, 724, yy, 2.0, GOLD, a)
+    # a two-sail lantern boat on the lagoon, for scale and for the
+    # promise of a quiet evening afloat
+    # reflection under the hull
+    for yy, a in ((736, 0.28), (748, 0.18), (762, 0.10), (776, 0.06)):
+        thick_line(668, yy, 748, yy, 2.5, GOLD, a)
+    # hull
+    fill_poly([(648, 700), (772, 700), (752, 722), (668, 722)], (10, 16, 30))
+    fill_poly([(648, 700), (772, 700), (766, 706), (654, 706)], (30, 22, 16))
+    # mast
+    thick_line(712, 700, 712, 596, 3.5, (46, 38, 28))
+    # main sail, warm from the town lights
+    fill_poly([(716, 604), (716, 696), (766, 696)], (238, 226, 198))
+    fill_poly([(716, 604), (716, 696), (766, 696)], (255, 200, 120), 0.18)
+    # jib
+    fill_poly([(708, 612), (708, 696), (664, 696)], (228, 216, 190))
+    # cabin with lit windows, and a stern lantern
+    rect(700, 688, 22, 12, (14, 20, 36))
+    rect(704, 691, 4, 6, GOLD)
+    rect(714, 691, 4, 6, GOLD)
+    soft_disc(724, 686, 10, GOLD, 0.6)
+    disc(724, 686, 3, (255, 210, 130))
 
 
 def draw_foreground():
@@ -337,6 +473,57 @@ def draw_foreground():
                   (6, 11, 24))
         fill_poly([(px, py - 78 * s), (px - 11 * s, py - 28 * s),
                    (px + 11 * s, py - 28 * s)], (6, 11, 24))
+
+
+def draw_reflections(rng):
+    # gold shimmer where the town lights meet the lagoon, in front of
+    # the cliff base, plus a few wave strokes across the open water
+    for _ in range(70):
+        x = rng.uniform(480, 780)
+        y = rng.uniform(HORIZON + 130, H - 40)
+        ln = rng.uniform(8, 44)
+        a = rng.uniform(0.08, 0.26) * (1.0 - (y - HORIZON) / 420.0)
+        thick_line(x, y, x + ln, y, 2.0, GOLD, max(0.0, a))
+    for _ in range(90):
+        x = rng.uniform(530, W - 10)
+        y = rng.uniform(HORIZON + 6, H - 20)
+        ln = rng.uniform(14, 70)
+        col = (140, 170, 200) if rng.random() < 0.5 else (10, 22, 38)
+        thick_line(x, y, x + ln, y, 1.5, col, rng.uniform(0.10, 0.28))
+
+
+def draw_dock():
+    # wooden jetty in the lower-left corner, with a lit lantern
+    # (clear of the name, which starts at x ~120)
+    for i, px in enumerate(range(0, 120, 26)):
+        rect(px, 956 + (i % 2) * 3, 24, 10, (44, 32, 22))
+    for px in (8, 62, 106):
+        rect(px, 946, 8, 40, (36, 26, 18))
+    # lantern post
+    thick_line(70, 956, 70, 862, 4.0, (30, 22, 16))
+    soft_disc(70, 850, 38, (255, 190, 100), 0.40)
+    rect(59, 834, 22, 30, (20, 14, 10))
+    rect(63, 840, 14, 16, (255, 205, 120))
+    thick_line(57, 834, 81, 834, 2.0, (20, 14, 10))
+    # barrels on the jetty
+    for (bx, by) in ((12, 930), (38, 936)):
+        rect(bx, by, 22, 26, (52, 38, 24))
+        thick_line(bx, by + 8, bx + 22, by + 8, 2.0, (30, 22, 14), 0.8)
+        thick_line(bx, by + 18, bx + 22, by + 18, 2.0, (30, 22, 14), 0.8)
+
+
+def draw_branches(rng):
+    # dark branches framing the top-left corner
+    col = (8, 12, 26)
+    thick_line(0, 40, 120, 90, 7.0, col, 0.95)
+    thick_line(60, 60, 150, 30, 5.0, col, 0.95)
+    thick_line(40, 70, 90, 150, 5.0, col, 0.95)
+    thick_line(120, 90, 190, 70, 4.0, col, 0.9)
+    for _ in range(36):
+        t = rng.uniform(0, 1)
+        bx = t * 190
+        by = 40 + t * 60 + rng.uniform(-24, 24)
+        soft_disc(bx, by, rng.uniform(6, 13), (10, 18, 30), 0.9)
 
 
 # ---------------------------------------------------------------- lettering
@@ -377,13 +564,14 @@ def draw_name():
     width = 8 * 11.0 * scale - scale
     x0 = (W - width) / 2.0
     y0 = 830.0
-    # divider rule with a diamond, above the name
+    # divider rule with a four-point star, above the name
     thick_line(300, 800, 486, 800, 2.0, CREAM, 0.75)
     thick_line(538, 800, 724, 800, 2.0, CREAM, 0.75)
-    fill_poly([(512, 792), (520, 800), (512, 808), (504, 800)], CREAM, 0.9)
-    # soft shadow, then the name itself
-    draw_text(text, x0 + 5, y0 + 6, scale, (8, 13, 30), 0.6)
-    draw_text(text, x0, y0, scale, CREAM)
+    fill_poly([(512, 786), (516, 796), (526, 800), (516, 804),
+               (512, 814), (508, 804), (498, 800), (508, 796)], GOLD, 0.95)
+    # soft shadow, then the name itself in gold
+    draw_text(text, x0 + 5, y0 + 6, scale, (8, 13, 30), 0.6, 2.4)
+    draw_text(text, x0, y0, scale, (255, 204, 118), 1.0, 2.4)
 
 
 # ---------------------------------------------------------------- PNG output
@@ -418,12 +606,18 @@ def main():
     draw_stars(rng)
     draw_moon()
     draw_meteors()
+    draw_mountains_and_clouds(rng)
     draw_sea()
     draw_cliff()
+    draw_bridge()
+    draw_waterfall(rng)
     draw_town(rng)
     draw_tower()
     draw_boat()
+    draw_reflections(rng)
     draw_foreground()
+    draw_dock()
+    draw_branches(rng)
     draw_name()
     os.makedirs(OUT_DIR, exist_ok=True)
     data = png_bytes()
