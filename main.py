@@ -4,24 +4,26 @@
 Entry for make.fun "The Poster for a Place That Isn't There"
 (the-poster-for-a-place-that-i-2-20261121-0539).
 
-Draws one 1024x1536 (2:3 portrait) PNG to $MAKEFUN_OUTPUT_DIR/entry.png
-using only the Python 3.13 standard library. Deterministic: two runs
-write byte-identical PNGs. No network, no fonts, no external files --
-the lettering is a hand-built stroke font drawn with the same
-rasterizer as the picture.
+Draws one 1024x1024 PNG to $MAKEFUN_OUTPUT_DIR/entry.png using only
+the Python 3.13 standard library. Deterministic: two runs write
+byte-identical PNGs. No network, no fonts, no external files -- the
+lettering is a hand-built stroke font drawn with the same rasterizer
+as the picture.
 
-Layout v3 (21 Nov 2026, from AT's second reference -- flat vector
-minimalist, same concept, new graphic layout): a deep-navy night sky
-with smooth teal aurora ribbons, a crescent moon and two meteors; the
-Starlight Observatory on a hilltop sends one clean beam up into the
-aurora; a row of flat houses with warm lit windows steps down the
-hill to a slatted pier at the shoreline; below, a still lagoon carries
-a cream-sailed boat, a wooden jetty with a lantern, and a column of
-gold reflection dashes; the name VELDARIS is set large in thin gold
-line letters at the bottom, with a small star and divider rules,
-inside a hairline frame. Every pixel is drawn by this program from
-scratch; no external image is used -- the reference was only looked
-at for composition, palette and mood.
+Layout v4 (21 Nov 2026, square): the v3 portrait (1024x1536) would
+have FAILED the sealed scorer -- RULES.txt and competition.yaml both
+cap the image at "1024 by 1024 pixels" (and 1 MiB); an invalid entry
+scores 0 and takes no prize. So the same flat-vector composition from
+AT's second reference (deep-navy night, smooth teal aurora ribbons,
+crescent moon, two meteors, the Starlight Observatory sending one
+clean beam up into the aurora, flat houses with warm lit windows
+stepping down the hill to a slatted pier, a still lagoon with a
+cream-sailed boat, a wooden jetty with a lantern, a column of gold
+reflection dashes, and the name VELDARIS in thin gold line letters
+with a small star and divider rules, inside a hairline frame) is
+re-laid-out for a 1024x1024 square. Every pixel is drawn by this
+program from scratch; no external image is used -- the reference was
+only looked at for composition, palette and mood.
 """
 
 import math
@@ -31,7 +33,7 @@ import struct
 import zlib
 
 W = 1024
-H = 1536
+H = 1024
 OUT_DIR = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
 SEED = 20261121
 
@@ -158,7 +160,7 @@ def rect(x, y, w, h, col, a=1.0):
 
 # ---------------------------------------------------------------- scene
 
-WATERLINE = 860
+WATERLINE = 560
 CREAM = (247, 235, 201)
 GOLD = (255, 196, 107)
 PALE_GOLD = (242, 216, 160)
@@ -175,11 +177,11 @@ def draw_sky():
 
 
 def draw_stars(rng):
-    for _ in range(170):
+    for _ in range(150):
         x = rng.uniform(30, W - 30)
-        y = rng.uniform(30, 820)
+        y = rng.uniform(30, 500)
         # keep the moon clear
-        if math.hypot(x - 828, y - 178) < 95:
+        if math.hypot(x - 845, y - 125) < 95:
             continue
         r = rng.uniform(0.7, 1.8)
         bright = rng.uniform(0.30, 0.85)
@@ -191,11 +193,11 @@ def draw_aurora():
     # smooth flat ribbons: a soft halo pass, then a brighter core,
     # each following a slow sine wave across the top of the sky
     ribbons = [
-        (120, 34, 430, 0.6, 20, (16, 190, 180), 0.60),
-        (165, 40, 520, 2.1, 24, (40, 120, 225), 0.52),
-        (205, 30, 380, 4.0, 16, (30, 200, 165), 0.48),
-        (250, 38, 470, 1.2, 22, (60, 150, 235), 0.42),
-        (295, 26, 340, 5.3, 14, (20, 180, 190), 0.38),
+        (72, 24, 430, 0.6, 20, (16, 190, 180), 0.60),
+        (100, 28, 520, 2.1, 24, (40, 120, 225), 0.52),
+        (128, 22, 380, 4.0, 16, (30, 200, 165), 0.48),
+        (158, 26, 470, 1.2, 22, (60, 150, 235), 0.42),
+        (188, 20, 340, 5.3, 14, (20, 180, 190), 0.38),
     ]
     for base, amp, wave, phase, width, col, a in ribbons:
         pts = []
@@ -211,10 +213,10 @@ def draw_aurora():
 
 def draw_moon():
     # glow, then a crescent carved by two overlapping circles
-    soft_disc(828, 178, 110, (220, 205, 170), 0.20)
-    soft_disc(828, 178, 78, (240, 228, 196), 0.12)
-    cx, cy, r = 828, 178, 58
-    ox, oy, r2 = 858, 156, 52
+    soft_disc(845, 125, 100, (220, 205, 170), 0.20)
+    soft_disc(845, 125, 70, (240, 228, 196), 0.12)
+    cx, cy, r = 845, 125, 46
+    ox, oy, r2 = 872, 104, 41
     for yy in range(cy - r, cy + r + 1):
         for xx in range(cx - r, cx + r + 1):
             d1 = (xx - cx) ** 2 + (yy - cy) ** 2
@@ -224,7 +226,7 @@ def draw_moon():
 
 
 def draw_meteors():
-    for (x0, y0, x1, y1) in [(200, 240, 320, 330), (700, 300, 820, 395)]:
+    for (x0, y0, x1, y1) in [(170, 165, 280, 245), (615, 200, 725, 290)]:
         steps = 24
         for s in range(steps):
             t0 = s / steps
@@ -237,9 +239,8 @@ def draw_meteors():
 
 
 # hill surface, defined by control points and linear interpolation
-_HILL = [(0, 720), (120, 660), (260, 580), (380, 545), (470, 560),
-         (580, 650), (680, 760), (760, 820), (840, 850), (900, 858),
-         (1024, 860)]
+_HILL = [(0, 505), (110, 455), (220, 395), (320, 360), (400, 368),
+         (500, 425), (600, 490), (700, 540), (800, 558), (1024, 560)]
 
 
 def hill_y(x):
@@ -252,7 +253,7 @@ def hill_y(x):
 
 def draw_ridge():
     # a distant mountain on the far right, behind the main hill
-    fill_poly([(700, WATERLINE), (820, 745), (940, 790), (W, 750),
+    fill_poly([(690, WATERLINE), (790, 465), (880, 500), (W, 455),
                (W, WATERLINE)], (18, 26, 52))
 
 
@@ -275,19 +276,19 @@ def draw_sea():
 
 def draw_beam():
     # one clean beam from the observatory dome up into the aurora
-    thick_line(300, 440, 520, 110, 12.0, (90, 220, 215), 0.22)
-    thick_line(300, 440, 520, 110, 5.0, (110, 230, 220), 0.80)
+    thick_line(300, 285, 470, 85, 10.0, (90, 220, 215), 0.22)
+    thick_line(300, 285, 470, 85, 4.0, (110, 230, 220), 0.80)
 
 
 def draw_observatory():
     # small and flat: a trapezoid tower, a light dome, three lit
     # windows -- the one landmark, kept quiet on the hilltop
-    fill_poly([(280, 575), (320, 575), (310, 472), (290, 472)], (20, 28, 54))
-    disc(300, 464, 26, (100, 120, 150))
-    rect(272, 464, 56, 7, (16, 24, 48))
-    for wx in (289, 297, 305):
-        rect(wx, 498, 6, 14, GOLD)
-    disc(300, 436, 3, (200, 225, 255))
+    fill_poly([(280, 367), (320, 367), (312, 300), (288, 300)], (20, 28, 54))
+    disc(300, 292, 20, (100, 120, 150))
+    rect(274, 292, 52, 6, (16, 24, 48))
+    for wx in (290, 297, 304):
+        rect(wx, 318, 5, 12, GOLD)
+    disc(300, 272, 2, (200, 225, 255))
 
 
 def _windows(rng, x, y, w, h):
@@ -307,86 +308,86 @@ def _windows(rng, x, y, w, h):
 def draw_town(rng):
     # a stepped row of flat houses descending the hill to the shore;
     # each has a dark maroon pitched roof and a grid of warm windows.
-    # The row leaves a gap around the observatory (x ~274-326) so the
+    # The row leaves a gap around the observatory (x ~224-352) so the
     # dome is never hidden behind a roof.
-    houses = [(30, 66, 86), (104, 70, 90), (182, 66, 82),
-              (360, 68, 88), (428, 62, 80), (492, 58, 74), (554, 54, 68),
-              (612, 50, 62), (664, 46, 56), (712, 44, 50)]
+    houses = [(28, 58, 64), (96, 62, 68), (166, 58, 62),
+              (352, 60, 66), (418, 56, 60), (480, 52, 56), (538, 48, 50),
+              (592, 44, 46), (642, 40, 42), (688, 36, 38)]
     for (x, w, h) in houses:
-        base = int(hill_y(x + w / 2) + 6)
+        base = int(hill_y(x + w / 2) + 4)
         rect(x, base - h, w, h, (18, 26, 50))
-        fill_poly([(x - 3, base - h), (x + w // 2, base - h - 16),
+        fill_poly([(x - 3, base - h), (x + w // 2, base - h - 13),
                    (x + w + 3, base - h)], (58, 32, 36))
         _windows(rng, x, base - h, w, h)
 
 
 def draw_bridge():
     # a slatted pier at the shoreline, where the hill meets the water
-    thick_line(820, 858, 985, 858, 5.0, (120, 90, 60), 1.0)
-    for x in range(826, 980, 9):
-        thick_line(x, 860, x, 906, 2.0, (96, 72, 48), 0.9)
-    for px in (830, 975):
-        thick_line(px, 858, px, 894, 4.0, (80, 60, 40), 1.0)
+    thick_line(770, 560, 975, 560, 4.0, (120, 90, 60), 1.0)
+    for x in range(776, 970, 9):
+        thick_line(x, 562, x, 598, 2.0, (96, 72, 48), 0.9)
+    for px in (778, 967):
+        thick_line(px, 560, px, 594, 4.0, (80, 60, 40), 1.0)
 
 
 def draw_reflections(rng):
     # scattered dashes across the lagoon, plus one column of gold
     # dashes widening downward under the middle of the sky
-    for _ in range(240):
+    for _ in range(220):
         x = rng.uniform(30, W - 30)
-        y = rng.uniform(WATERLINE + 20, H - 40)
+        y = rng.uniform(WATERLINE + 20, H - 24)
         ln = rng.uniform(8, 60)
         col = rng.choice([(255, 200, 120), (120, 180, 200),
                           (200, 220, 240), (140, 170, 200)])
         thick_line(x, y, x + ln, y, 2.0, col, rng.uniform(0.08, 0.28))
     y = WATERLINE + 25
-    while y < 1250:
-        half = 25 + (y - WATERLINE) * 0.35
+    while y < 830:
+        half = 20 + (y - WATERLINE) * 0.30
         for _ in range(rng.randint(1, 2)):
-            cx = 560 + rng.uniform(-half, half)
-            ln = rng.uniform(16, 60)
-            a = rng.uniform(0.20, 0.40) * (1.0 - (y - WATERLINE) / 480.0)
+            cx = 500 + rng.uniform(-half, half)
+            ln = rng.uniform(14, 55)
+            a = rng.uniform(0.20, 0.40) * (1.0 - (y - WATERLINE) / 300.0)
             thick_line(cx - ln / 2, y, cx + ln / 2, y, 2.0, GOLD,
                        max(0.0, a))
-        y += 14
+        y += 13
 
 
 def draw_boat():
     # a cream-sailed boat at anchor, right of centre
-    for yy, a in ((1240, 0.18), (1256, 0.12), (1272, 0.07)):
-        thick_line(660, yy, 840, yy, 2.5, GOLD, a)
-    fill_poly([(628, 1182), (872, 1182), (842, 1228), (658, 1228)],
+    for yy, a in ((742, 0.18), (754, 0.12), (766, 0.07)):
+        thick_line(640, yy, 780, yy, 2.5, GOLD, a)
+    fill_poly([(640, 700), (770, 700), (748, 732), (662, 732)],
               (42, 32, 26))
-    thick_line(628, 1182, 872, 1182, 3.0, (150, 115, 70), 0.9)
-    thick_line(712, 955, 712, 1182, 4.0, (30, 24, 20))
-    fill_poly([(717, 962), (717, 1172), (802, 1172)], (238, 228, 198))
-    fill_poly([(707, 982), (707, 1172), (638, 1172)], (226, 214, 182))
-    rect(700, 1166, 26, 14, (16, 22, 38))
-    rect(708, 1169, 5, 7, GOLD)
+    thick_line(640, 700, 770, 700, 3.0, (150, 115, 70), 0.9)
+    thick_line(705, 575, 705, 700, 4.0, (30, 24, 20))
+    fill_poly([(700, 582), (700, 692), (648, 692)], (238, 228, 198))
+    fill_poly([(710, 595), (710, 692), (768, 692)], (226, 214, 182))
+    rect(694, 686, 22, 12, (16, 22, 38))
+    rect(701, 689, 5, 6, GOLD)
 
 
 def draw_dock():
     # a wooden jetty in the lower-left corner, with a lit lantern
-    # on a post -- clear of the name, which starts at x ~229
-    for (y0, y1) in ((1320, 1295), (1347, 1322), (1374, 1349)):
-        thick_line(0, y0, 250, y1, 5.0, (110, 80, 50), 1.0)
-    for px in range(12, 250, 28):
-        t = px / 250.0
-        y = 1347 - t * 25
-        rect(px, int(y) - 8, 7, 55, (80, 58, 36))
-    thick_line(92, 1320, 92, 1240, 4.0, (30, 22, 16))
-    soft_disc(92, 1228, 42, (255, 190, 100), 0.35)
-    rect(80, 1212, 24, 30, (20, 14, 10))
-    rect(84, 1218, 16, 18, (255, 205, 120))
-    thick_line(80, 1212, 104, 1212, 2.0, (20, 14, 10))
+    # on a post -- clear of the name, which starts at x ~216
+    for (y0, y1) in ((898, 876), (922, 900)):
+        thick_line(0, y0, 200, y1, 5.0, (110, 80, 50), 1.0)
+    for px in range(12, 200, 28):
+        t = px / 200.0
+        y = 922 - t * 22
+        rect(px, int(y) - 8, 7, 50, (80, 58, 36))
+    thick_line(85, 898, 85, 828, 4.0, (30, 22, 16))
+    soft_disc(85, 816, 38, (255, 190, 100), 0.35)
+    rect(73, 800, 24, 28, (20, 14, 10))
+    rect(77, 806, 16, 16, (255, 205, 120))
+    thick_line(73, 800, 97, 800, 2.0, (20, 14, 10))
 
 
 def draw_frame():
     col = (160, 145, 100)
-    thick_line(26, 26, W - 26, 26, 2.0, col, 0.5)
-    thick_line(26, H - 26, W - 26, H - 26, 2.0, col, 0.5)
-    thick_line(26, 26, 26, H - 26, 2.0, col, 0.5)
-    thick_line(W - 26, 26, W - 26, H - 26, 2.0, col, 0.5)
+    thick_line(24, 24, W - 24, 24, 2.0, col, 0.5)
+    thick_line(24, H - 24, W - 24, H - 24, 2.0, col, 0.5)
+    thick_line(24, 24, 24, H - 24, 2.0, col, 0.5)
+    thick_line(W - 24, 24, W - 24, H - 24, 2.0, col, 0.5)
 
 
 # ---------------------------------------------------------------- lettering
@@ -424,17 +425,17 @@ def draw_name():
     # thin gold line letters, as in the reference -- no shadow, no
     # bold stroke; a small asterisk with divider rules below
     text = "VELDARIS"
-    scale = 6.5
+    scale = 6.8
     width = 8 * 11.0 * scale - scale
     x0 = (W - width) / 2.0
-    y0 = 1385.0
+    y0 = 878.0
     draw_text(text, x0, y0, scale, PALE_GOLD, 1.0, 0.8)
-    thick_line(250, 1502, 470, 1502, 1.5, PALE_GOLD, 0.6)
-    thick_line(554, 1502, 774, 1502, 1.5, PALE_GOLD, 0.6)
-    cx, cy = 512, 1502
+    thick_line(235, 994, 465, 994, 1.5, PALE_GOLD, 0.6)
+    thick_line(559, 994, 789, 994, 1.5, PALE_GOLD, 0.6)
+    cx, cy = 512, 994
     for ang in (0.0, math.pi / 4, math.pi / 2, 3 * math.pi / 4):
-        dx = math.cos(ang) * 9
-        dy = math.sin(ang) * 9
+        dx = math.cos(ang) * 8
+        dy = math.sin(ang) * 8
         thick_line(cx - dx, cy - dy, cx + dx, cy + dy, 1.8, PALE_GOLD, 0.9)
 
 
